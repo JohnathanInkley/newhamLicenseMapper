@@ -19,10 +19,10 @@ def makeMap(points):
     for point in points:
         gmap.marker(point.latitude, point.longitude, title=point.address)
 
-    gmap.draw("index.html")
+    gmap.draw("oldIndex.html")
 
 def postProcessHTML():
-    with open('index.html', 'r') as file:
+    with open('oldIndex.html', 'r') as file:
         html_content = file.read()
 
     initialize_pattern = re.compile(
@@ -69,7 +69,7 @@ def postProcessHTML():
             modified_initialize_function = f"function initialize() {{\n{map_and_icon_setup_code}\n{all_markers_array}\n{markers_code}\n{click_functionality_code}\n}}\n</script>"
             html_content = initialize_pattern.sub(modified_initialize_function, html_content)
 
-            with open('index.html', 'w') as file:
+            with open('oldIndex.html', 'w') as file:
                 file.write(html_content)
             print("Markers successfully modified and click functionality added.")
         else:
