@@ -8,13 +8,14 @@
          body, html {
          margin: 0;
          padding: 0;
-         height: 100%;
-         overflow: hidden; /* Prevent overall page scrolling */
+         height: auto;
+	 overflow-x: hidden; /* Keep horizontal scrolling disabled */
+	 overflow-y: auto; /* Enable vertical scrolling */
          font-family: 'Helvetica', sans-serif;
          }
          #map_canvas {
          width: 100%;
-         height: 60vh; /* Larger portion for the map */
+         height: 50vh; /* Larger portion for the map */
          }
          #notes {
          background-color: #f9f9f9;
@@ -49,13 +50,15 @@
          button:hover {
          background-color: #45a049;
          }
-         #footer {
-         text-align: center;
-         padding: 5px 0;
-         height: 10vh; /* Minimal height for the footer */
-         line-height: 5vh; /* Align text vertically */
-         width: 100%; /* Ensure it spans the full width */
-         }
+	 #footer {
+	 position: relative;
+	 padding: 10px;
+	 text-align: center;
+	 background-color: #f4f4f4;
+	 width: 100%;
+	 height: calc(15vh - 20px); /* Subtract a bit more if necessary */
+	 box-sizing: border-box; /* Ensures padding is included in the height */
+	 }
          #landlordDropdown {
          position: absolute;
          background-color: #f9f9f9;
