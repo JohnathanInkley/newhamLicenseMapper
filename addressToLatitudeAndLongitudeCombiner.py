@@ -19,13 +19,28 @@ headers = {
     'From': 'juk92@gmail.com'
 }
 
-
-def getPointFromAddress(address):
+def getCoordinateWebResponse(address):
     url = 'https://nominatim.openstreetmap.org/search?q=' + urllib.parse.quote(address) +'&format=json'
     response = requests.get(url, headers=headers)
     response.raise_for_status()
-    latitude = response.json()[0]["lat"]
-    longitude = response.json()[0]["lon"]
+    return response.json()
+
+def extractPostcode(address):
+    addressWords = address.split(' ')
+    firstPostcodePart = addressWords[-2]
+    secondPostcodePart = addressWords[-1]
+    if (len(firstPostcodePart) != 2 and len(firstPostcodePart) != 3) or len(secondPostcodePart) != 3:
+        print('ILL-FORMATED POSTCODE')
+    postcode = firstPostcodePart + ' ' + secondPostcodePart
+    return getCoordinateWebResponse(postcode)
+
+def getPointFromAddress(address):
+    coordinateJson = getCoordinateWebResponse(address)
+    if len(coordinateJson) == 0:
+        print('Couldn\'t find address, relying on postcode for coordinates')
+        coordinateJson = extractPostcode(address)        
+    latitude = coordinateJson[0]["lat"]
+    longitude = coordinateJson[0]["lon"]
     return Point(address, latitude, longitude)
             
 def main():
