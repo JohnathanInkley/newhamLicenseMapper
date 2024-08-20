@@ -91,6 +91,25 @@
         #landlordFilter input[type="checkbox"] {
             margin-right: 10px;
         }
+        #loadingPopup {
+            position: fixed;
+            top: 25%;
+            left: 25%;
+	    width: 50%;
+	    height: 50%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+	    box-sizing: border-box; 
+            border-radius: 5px;
+            z-index: 2000;
+            text-align: center;
+	    align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            display: none; /* Hidden initially */
+        }
+
     </style>
     <script type="text/javascript">
         let map;
@@ -103,6 +122,9 @@
 
         function initialize() {
 	    console.log('Calling initialise')
+
+	    document.getElementById('loadingPopup').style.display = 'block'; // Show the loading popup
+
             map = new google.maps.Map(document.getElementById('map_canvas'), {
                 zoom: 13,
                 center: new google.maps.LatLng(51.518610, 0.006247)
@@ -116,9 +138,12 @@
 
                 populateLandlordFilter();
                 populateMarkers();
+
+		document.getElementById('loadingPopup').style.display = 'none'; // Hide the loading popup
             })
             .catch(error => {
                 console.error("Error fetching or processing data:", error);
+		document.getElementById('loadingPopup').style.display = 'none'; // Hide the loading popup even if there's an error
             });
 
             setupVisibilityChangeListener()
@@ -340,6 +365,7 @@
             </label>
         </div>
     </div>
+    <div id="loadingPopup">Loading license data and notes...</div>
     <input type="hidden" id="currentAddress">
 </body>
 </html>
