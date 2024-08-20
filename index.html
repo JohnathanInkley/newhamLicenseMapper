@@ -1,189 +1,241 @@
+<!DOCTYPE html>
 <html>
-   <head>
-      <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-      <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-      <title>Newham doorknocking</title>
-      <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=visualization"></script>
-      <style>
-         body, html {
-         margin: 0;
-         padding: 0;
-         height: auto;
-	 overflow-x: hidden; /* Keep horizontal scrolling disabled */
-	 overflow-y: auto; /* Enable vertical scrolling */
-         font-family: 'Helvetica', sans-serif;
-         }
-         #map_canvas {
-         width: 100%;
-         height: 50vh; /* Larger portion for the map */
-         }
-         #notes {
-         background-color: #f9f9f9;
-         border-radius: 5px;
-         border: 1px solid #ccc;
-         height: 20vh; /* Space for displaying notes */
-         overflow-y: auto; /* Scrollable area for notes */
-         padding: 10px;
-         margin: 0;
-         }
-         #note_submitter {
-         text-align: center;
-         height: 5vh; /* Reduced height for note submission */
-         padding: 5px 0;
-         }
-         input[type="text"], select {
-         padding: 8px;
-         margin: 0 5px;
-         width: 200px;
-         border: 1px solid #ccc;
-         border-radius: 5px;
-         }
-         button {
-         padding: 8px 16px;
-         background-color: #4CAF50;
-         color: white;
-         border: none;
-         border-radius: 5px;
-         cursor: pointer;
-         font-size: 16px;
-         }
-         button:hover {
-         background-color: #45a049;
-         }
-	 #footer {
-	 position: relative;
-	 padding: 10px;
-	 text-align: center;
-	 background-color: #f4f4f4;
-	 width: 100%;
-	 height: calc(15vh - 20px); /* Subtract a bit more if necessary */
-	 box-sizing: border-box; /* Ensures padding is included in the height */
-	 }
-         #landlordDropdown {
-         position: absolute;
-         background-color: #f9f9f9;
-         width: 100%;
-         box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-         z-index: 100; /* Make sure it's above other content */
-         top: 50px; /* Adjust as needed */
-         left: 0;
-         display: none; /* Initially hidden */
-         overflow-y: auto;
-         max-height: 90vh; /* Adjustable based on your needs */
-         }
-         .dropdown-content {
-         display: none; /* Hide dropdown content by default */
-         }
-         /* Style for checkboxes and labels inside the dropdown */
-         #landlordFilter label {
-         display: block; /* Makes it easier to style and interact with */
-         padding: 10px;
-         text-align: left;
-         border-bottom: 1px solid #ddd; /* Adds a separator between items */
-         }
-         #landlordFilter input[type="checkbox"] {
-         margin-right: 10px;
-         }
-      </style>
-      <script type="text/javascript">
-         let map;
-         let propertyData = {};
-         let markers = {};
-         let landlordData = {};
-         
-          function initialize() {
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>Newham Doorknocking</title>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=visualization"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
+            font-family: 'Helvetica', sans-serif;
+        }
+        #map_canvas {
+            width: 100%;
+            height: 50vh;
+        }
+        #notes {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            height: 20vh;
+            overflow-y: auto;
+            padding: 10px;
+            margin: 0;
+        }
+        #note_submitter {
+            text-align: center;
+            height: 5vh;
+            padding: 5px 0;
+        }
+        input[type="text"], select {
+            padding: 8px;
+            margin: 0 5px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button:hover:enabled {
+            background-color: #45a049;
+        }
+        #footer {
+            position: relative;
+            padding: 10px;
+            text-align: center;
+            background-color: #f4f4f4;
+            width: 100%;
+            height: calc(15vh - 20px);
+            box-sizing: border-box;
+        }
+        #landlordDropdown {
+            position: absolute;
+            background-color: #f9f9f9;
+            width: 100%;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 100;
+            top: 50px;
+            left: 0;
+            display: none;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+        .dropdown-content {
+            display: none;
+        }
+        #landlordFilter label {
+            display: block;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        #landlordFilter input[type="checkbox"] {
+            margin-right: 10px;
+        }
+    </style>
+    <script type="text/javascript">
+        let map;
+        let propertyData = {};
+        let markers = {};
+        let landlordData = {};
+        let currentProperty = '';
+        let updateInterval;
+        let visibilityChange;
+
+        function initialize() {
+	    console.log('Calling initialise')
             map = new google.maps.Map(document.getElementById('map_canvas'), {
-              zoom: 13,
-              center: new google.maps.LatLng(51.518610, 0.006247)
-          });
-         
-          var marker_icon_FF0000 = {
-                    url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAiCAYAAACwaJKDAAAABmJLR0QA/wD/AP+gvaeTAAACBklEQVRIia3VzUtUURgH4GdG/AiyZZShtWgXUbSIFtGqRYtqWRLhXyBYf0K6MaJQ2gRtayHtijYpleHKSCgIcRHoIiOSKEzLKea0OOeqTfPlzPzg5Qwz9zz3nXPvPTeneo7gNA4gjyI+Ygbva8z9L2cxi9BHOE+4msY+gliz6biayWE0R7GfMEcoEkJJzRH6CbnY+WiaVxEc6yY8KQOVq8eE7tj1WCV4qIswUyeY1QyhK8JDpWAP1m7vEMzqTkTXkrOZkYOEQoNogXAowiPE2wQuDqC9nktZJu0YSE72XRs2phrsMqup2OkG2vLpRB19DXaZJc3vQHv294Um0e3z8yigsNQkmuYXUMie5/npJtE0fz55YLiXsNHELdUbV2B4+4n2Y/Vmg+itCK4m558MdhBe7hCcJnRGdLDS0ox3E17XCb4h7IngeLX1zuFhD2G5BriytY4Tqmx9WXbh3Tnl99KsLkdwAbtrgVmO4/eDCuCkzd3/TL1glru9hF8lYJFwMoKPdgrCXqzfL0GfR7CIo42gcO9YCXopolONgnAC4W0Cv9l8dVxpBoWFGwmdiOC6Glc8X+3HlKeT6cOzOLzAjyaaBBc602ZzOHZ6vVkQ9kl7Qi6ip1qBwpdrEfwjPnFVU8+awuKrOC7hZ6vQlQ9baM3Ui379HsfVVqKf07jcSvRTGhfrOfgvIP3ECS77BDoAAAAASUVORK5CYII=",
-                    labelOrigin: new google.maps.Point(10, 11)
-                };
-         
-         
+                zoom: 13,
+                center: new google.maps.LatLng(51.518610, 0.006247)
+            });
+
             fetch('https://script.google.com/macros/s/AKfycbyPgu1ftY47OFA6HSC0nPb-WixxmJKlBhCnv6P9Wb40EpU73qKZDtqleDXj4Q1dzYjS/exec')
-         .then(response => response.json())
-                    .then(data => {
-                         propertyData = data.properties;
-                    landlordData = data.landlords;
-                    populateLandlordFilter();
-                        Object.keys(propertyData).forEach(address => {
-                            const info = propertyData[address];
-                            const marker = new google.maps.Marker({
-                                position: new google.maps.LatLng(info.latitude, info.longitude),
-                                map: map,
-                                icon: marker_icon_FF0000,
-                                title: address,
-                                landlord: info.landlord
-                            });
-         
-                            // Store marker with its address as key
-                            markers[address] = marker;
-         
-                            marker.addListener('click', function() {
-                                updateNotesDisplay(address);
-                            });
-                        });
-                        
-                    })
-                    .catch(error => {
-                        console.error("Error fetching or processing data:", error);
-         });
-         
-                 // Hide specific Google Maps error overlay
-                hideErrorOverlay();
-         
-          }
-         
-          function updateNotesDisplay(address) {
+            .then(response => response.json())
+            .then(data => {
+                propertyData = data.properties;
+                landlordData = data.landlords;
+
+                populateLandlordFilter();
+                populateMarkers();
+            })
+            .catch(error => {
+                console.error("Error fetching or processing data:", error);
+            });
+
+            setupVisibilityChangeListener()
+
+	    hideErrorOverlay();
+        }
+
+        function populateMarkers() {
+            Object.keys(propertyData).forEach((address, index) => {
+                const info = propertyData[address];
+                const marker = new google.maps.Marker({
+                    position: new google.maps.LatLng(info.latitude, info.longitude),
+                    map: null,
+                    icon: marker_icon_FF0000,
+                    title: address,
+                    landlord: info.landlord,
+                    zIndex: index // Explicitly setting the z-index
+                });
+
+                markers[address] = marker;
+
+                marker.addListener('click', function() {
+                    currentProperty = address;
+                    updateNotesDisplay(address);
+                });
+            });
+	    filterMarkers();
+        }
+
+        function updateNotesDisplay(address) {
             const info = propertyData[address];
             const notesText = info.notes.length > 0 ? info.notes.join('<br>') : 'No notes';
-         document.getElementById('notes').innerHTML = `Notes for ${address}:<br>${notesText}<br>Landlord: ${info.landlordName}, ${info.landlordAddress}`;
-         document.getElementById('currentAddress').value = address
-         }
-         
-         
-          function submitNote() {
-            const note = document.getElementById('noteInput').value;
-            const address = document.getElementById('currentAddress').value;
-            
+            document.getElementById('notes').innerHTML = `Notes for ${address}:<br>${notesText}<br>Landlord: ${info.landlordName}, ${info.landlordAddress}`;
+            document.getElementById('currentAddress').value = address;
+        }
+
+        function submitNote() {
+            const noteInput = document.getElementById('noteInput').value;
+            const nameInput = document.getElementById('nameInput').value;
+            const address = currentProperty;
+
+            if (!nameInput || !noteInput) return;
+
+            const fullNote = `${nameInput} - ${noteInput}`;
+
             fetch('https://script.google.com/macros/s/AKfycbyPgu1ftY47OFA6HSC0nPb-WixxmJKlBhCnv6P9Wb40EpU73qKZDtqleDXj4Q1dzYjS/exec', {
-                    method: 'POST',
-                    contentType: 'application/json',
-                    body: JSON.stringify({ address: address, note: note })
-                }).then(() => {
-                    document.getElementById('noteInput').value = ''; // Clear input
-                    alert('Note added successfully!');
-                    const dateNote = new Date().toLocaleDateString() + ": " + note;
-                    propertyData[address].notes.push(dateNote); // Update local data store
-                    updateNotesDisplay(address); // Refresh the notes display
-                }).catch(error => {
-                    console.error("Error submitting note:", error);
-         });
-         }
-         
-         function toggleDropdown() {
-            var dropdown = document.getElementById('landlordDropdown');
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block'; // Toggle visibility
-         }
-         
-         // Optional: Close dropdown when clicking outside of it
-         window.onclick = function(event) {
-            if (!event.target.matches('#footer button')) {
-                var dropdowns = document.getElementsByClassName("dropdown-content");
-                for (var i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.style.display === 'block') {
-                        openDropdown.style.display = 'none';
-                    }
+                method: 'POST',
+                contentType: 'application/json',
+                body: JSON.stringify({ address: address, note: fullNote })
+            }).then(() => {
+                document.getElementById('noteInput').value = '';
+                document.getElementById('nameInput').value = '';
+                propertyData[address].notes.push(fullNote);
+                updateNotesDisplay(address);
+            }).catch(error => {
+                console.error("Error submitting note:", error);
+            });
+        }
+
+        function enableSubmitButton() {
+            const nameInput = document.getElementById('nameInput').value;
+            const noteInput = document.getElementById('noteInput').value;
+            const submitButton = document.getElementById('submitNoteButton');
+            submitButton.disabled = !(nameInput && noteInput);
+        }
+
+        function setupVisibilityChangeListener() {
+            const visibilityChange = () => {
+                if (document.visibilityState === 'visible') {
+                    startUpdatingNotes();
+                } else {
+                    stopUpdatingNotes();
                 }
+            };
+
+            document.addEventListener('visibilitychange', visibilityChange);
+
+            visibilityChange(); // Initially start or stop updates based on the current state
+        }
+
+        function startUpdatingNotes() {
+            if (!updateInterval) {
+                updateInterval = setInterval(updateNotes, 10000);
+                console.log('Started updating notes');
             }
-         }
-         
-         
-         function populateLandlordFilter() {
+        }
+
+        function stopUpdatingNotes() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+                console.log('Stopped updating notes');
+            }
+        }
+
+        function updateNotes() {
+            fetch('https://script.google.com/macros/s/AKfycbyPgu1ftY47OFA6HSC0nPb-WixxmJKlBhCnv6P9Wb40EpU73qKZDtqleDXj4Q1dzYjS/exec?action=getUpdatedNotes')
+            .then(response => response.json())
+            .then(updatedData => {
+                Object.keys(updatedData).forEach(address => {
+                    if (propertyData[address]) {
+                        propertyData[address].notes = updatedData[address];
+                        if (address === currentProperty) {
+                            updateNotesDisplay(address);
+                        }
+                    }
+                });
+		console.log('Received notes update')
+                filterMarkers();
+            }).catch(error => {
+                console.error("Error updating notes:", error);
+            });
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('landlordDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function populateLandlordFilter() {
             const filterContainer = document.getElementById('landlordFilter');
             Object.keys(landlordData).forEach(landlord => {
                 const checkbox = document.createElement('input');
@@ -191,39 +243,52 @@
                 checkbox.id = landlord;
                 checkbox.value = landlord;
                 checkbox.onchange = filterMarkers;
-         
+
                 const label = document.createElement('label');
                 label.htmlFor = landlord;
                 label.textContent = `${landlord} (${landlordData[landlord].count})`;
-         
+
                 filterContainer.appendChild(checkbox);
                 filterContainer.appendChild(label);
                 filterContainer.appendChild(document.createElement('br'));
             });
-         }
-         
-         function filterMarkers() {
-            const showNotes = document.getElementById('showNotes').checked;
+        }
+
+        function filterMarkers() {
+            const showNotesOption = document.querySelector('input[name="showNotesOption"]:checked').value;
             const selectedLandlords = Array.from(document.querySelectorAll('#landlordFilter input[type="checkbox"]:checked')).map(checkbox => checkbox.value.toLowerCase());
-         
+
             Object.keys(markers).forEach(address => {
                 const marker = markers[address];
                 const info = propertyData[address];
                 const hasNotes = info.notes.length > 0;
                 const isLandlordSelected = selectedLandlords.length === 0 || selectedLandlords.includes(info.landlordName.toLowerCase());
-         
-                // Determine visibility based on notes and landlord selection
-                if (showNotes && !hasNotes) {
-                    marker.setMap(null); // Hide if 'show notes' is checked but there are no notes
-                } else if (isLandlordSelected) {
-                    marker.setMap(map); // Show if the landlord is selected (or if no landlords are selected, show all)
+
+                if (showNotesOption === 'all' || (showNotesOption === 'withNotes' && hasNotes) || (showNotesOption === 'noNotes' && !hasNotes)) {
+                    if (isLandlordSelected) {
+                        marker.setMap(map);
+                    } else {
+                        marker.setMap(null);
+                    }
                 } else {
-                    marker.setMap(null); // Otherwise, hide the marker
+                    marker.setMap(null);
                 }
             });
-         }
-         
-            function hideErrorOverlay() {
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('#footer button')) {
+                const dropdowns = document.getElementsByClassName("dropdown-content");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    const openDropdown = dropdowns[i];
+                    if (openDropdown.style.display === 'block') {
+                        openDropdown.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+	 function hideErrorOverlay() {
                 // Continuously check for the error message overlay and hide it
                 const interval = setInterval(() => {
                     const overlays = document.querySelectorAll('div[style*="position: absolute"]');
@@ -235,26 +300,43 @@
                     });
                 }, 100); // Check every 100 milliseconds
          }
-         
-         
-      </script>
-   </head>
-   <body onload="initialize()">
-      <div id="map_canvas"></div>
-      <div id="notes"></div>
-      <div id="note_submitter">
-         <input type="text" id="noteInput" placeholder="Enter a note">
-         <button onclick="submitNote()">Submit Note</button>
-      </div>
-      <div id="footer">
-         <button onclick="toggleDropdown()">Select Landlords</button>
-         <div id="landlordDropdown" class="dropdown-content" style="display: none;">
+
+
+
+        document.addEventListener('DOMContentLoaded', initialize);
+
+        const marker_icon_FF0000 = {
+            url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAiCAYAAACwaJKDAAAABmJLR0QA/wD/AP+gvaeTAAACBklEQVRIia3VzUtUURgH4GdG/AiyZZShtWgXUbSIFtGqRYtqWRLhXyBYf0K6MaJQ2gRtayHtijYpleHKSCgIcRHoIiOSKEzLKea0OOeqTfPlzPzg5Qwz9zz3nXPvPTeneo7gNA4gjyI+Ygbva8z9L2cxi9BHOE+4msY+gliz6biayWE0R7GfMEcoEkJJzRH6CbnY+WiaVxEc6yY8KQOVq8eE7tj1WCV4qIswUyeY1QyhK8JDpWAP1m7vEMzqTkTXkrOZkYOEQoNogXAowiPE2wQuDqC9nktZJu0YSE72XRs2phrsMqup2OkG2vLpRB19DXaZJc3vQHv294Um0e3z8yigsNQkmuYXUMie5/npJtE0fz55YLiXsNHELdUbV2B4+4n2Y/Vmg+itCK4m558MdhBe7hCcJnRGdLDS0ox3E17XCb4h7IngeLX1zuFhD2G5BriytY4Tqmx9WXbh3Tnl99KsLkdwAbtrgVmO4/eDCuCkzd3/TL1glru9hF8lYJFwMoKPdgrCXqzfL0GfR7CIo42gcO9YCXopolONgnAC4W0Cv9l8dVxpBoWFGwmdiOC6Glc8X+3HlKeT6cOzOLzAjyaaBBc602ZzOHZ6vVkQ9kl7Qi6ip1qBwpdrEfwjPnFVU8+awuKrOC7hZ6vQlQ9baM3Ui379HsfVVqKf07jcSvRTGhfrOfgvIP3ECS77BDoAAAAASUVORK5CYII=",
+            labelOrigin: new google.maps.Point(10, 11)
+        };
+    </script>
+</head>
+<body>
+    <div id="map_canvas"></div>
+    <div id="notes"></div>
+    <div id="note_submitter">
+        <input type="text" id="nameInput" placeholder="Your Name" oninput="enableSubmitButton()">
+        <input type="text" id="noteInput" placeholder="Enter a note" oninput="enableSubmitButton()">
+        <button id="submitNoteButton" onclick="submitNote()" disabled>Submit Note</button>
+    </div>
+    <div id="footer">
+        <button onclick="toggleDropdown()">Select Landlords</button>
+        <div id="landlordDropdown" class="dropdown-content" style="display: none;">
             <div id="landlordFilter"></div>
-         </div>
-         <div>
-            <input type="checkbox" id="showNotes" onchange="filterMarkers()"> Show properties with notes
-         </div>
-      </div>
-      <input type="hidden" id="currentAddress">
-   </body>
+        </div>
+        <div>
+            <label>
+                <input type="radio" name="showNotesOption" value="all" checked onchange="filterMarkers()"> All
+            </label>
+            <label>
+                <input type="radio" name="showNotesOption" value="noNotes" onchange="filterMarkers()"> No Notes
+            </label>
+            <label>
+                <input type="radio" name="showNotesOption" value="withNotes" onchange="filterMarkers()"> With Notes
+            </label>
+        </div>
+    </div>
+    <input type="hidden" id="currentAddress">
+</body>
 </html>
+
